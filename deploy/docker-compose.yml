@@ -1,0 +1,22 @@
+services:
+  web:
+    build: .
+    image: couch-compare:latest
+    container_name: couch-compare
+    restart: unless-stopped
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.couch-compare-http.rule=Host(`couches.141.147.52.165.sslip.io`)"
+      - traefik.http.routers.couch-compare-http.entrypoints=http
+      - traefik.http.routers.couch-compare-http.middlewares=redirect-to-https
+      - "traefik.http.routers.couch-compare-https.rule=Host(`couches.141.147.52.165.sslip.io`)"
+      - traefik.http.routers.couch-compare-https.entrypoints=https
+      - traefik.http.routers.couch-compare-https.tls=true
+      - traefik.http.routers.couch-compare-https.tls.certresolver=letsencrypt
+      - traefik.http.services.couch-compare.loadbalancer.server.port=80
+
+networks:
+  coolify:
+    external: true

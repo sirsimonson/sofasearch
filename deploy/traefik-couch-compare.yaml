@@ -1,0 +1,23 @@
+# Traefik dynamic config for the standalone deployment.
+# Copy to /data/coolify/proxy/dynamic/couch-compare.yaml on the server.
+http:
+  routers:
+    couch-compare-http:
+      entryPoints:
+        - http
+      rule: Host(`couches.141.147.52.165.sslip.io`)
+      service: couch-compare
+      middlewares:
+        - redirect-to-https
+    couch-compare-https:
+      entryPoints:
+        - https
+      rule: Host(`couches.141.147.52.165.sslip.io`)
+      service: couch-compare
+      tls:
+        certResolver: letsencrypt
+  services:
+    couch-compare:
+      loadBalancer:
+        servers:
+          - url: http://couch-compare:80

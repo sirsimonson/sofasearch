@@ -3,9 +3,11 @@
 Kleine statische Web-App zur Auswertung von 71 geprüften Sofa-Links gegen ein definiertes
 Kundenprofil (Maße, Longchair-Typ, Federung, Salbeigrün, Budget ≤ 1.500 €).
 
-**Live:** https://couches.sick-simon.de (Coolify-App `couch-compare`)
+**Live:** https://couches.141.147.52.165.sslip.io
 
-> `deploy.sick-simon.de` ist die Coolify-Oberfläche selbst – die App läuft auf der Subdomain `couches.sick-simon.de`.
+> `deploy.sick-simon.de` ist die Coolify-Oberfläche selbst. Die App läuft aktuell als eigener
+> Container neben Coolify und wird über Traefik geroutet. Der `sslip.io`-Host zeigt direkt auf
+> die Server-IP (141.147.52.165) und braucht **keinen DNS-Eintrag**.
 
 ## Features
 
@@ -48,6 +50,7 @@ cd app && python3 -m http.server 8080
 
 - Build Pack: Dockerfile
 - Port: 80
-- Domain: `couches.sick-simon.de`
+- Standalone: `deploy/docker-compose.yml` + `deploy/traefik-couch-compare.yaml`
+- Coolify-managed (Alternative): App aus diesem Repo, Build Pack Dockerfile, Port 80, Domain `couches.sick-simon.de`
 - Healthcheck: `/healthz`
 - Keine Umgebungsvariablen, kein Volume nötig
