@@ -20,4 +20,4 @@ http:
     couch-compare:
       loadBalancer:
         servers:
-          - url: http://couch-compare:80
+          - url: http://couch-compare:8000

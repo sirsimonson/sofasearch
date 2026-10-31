@@ -1,9 +1,15 @@
 services:
   web:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
     image: couch-compare:latest
     container_name: couch-compare
     restart: unless-stopped
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - /data/couch-votes:/data
     networks:
       - coolify
     labels:
@@ -15,7 +21,7 @@ services:
       - traefik.http.routers.couch-compare-https.entrypoints=https
       - traefik.http.routers.couch-compare-https.tls=true
       - traefik.http.routers.couch-compare-https.tls.certresolver=letsencrypt
-      - traefik.http.services.couch-compare.loadbalancer.server.port=80
+      - traefik.http.services.couch-compare.loadbalancer.server.port=8000
 
 networks:
   coolify:

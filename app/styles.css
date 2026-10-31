@@ -117,7 +117,24 @@ tbody tr:last-child td { border-bottom: 0; }
 .c-seat { width: 86px; }
 .c-shop { width: 110px; }
 .c-color { width: 90px; }
+.c-vote { width: 104px; }
 .c-rec { width: 112px; }
+
+/* Voting */
+.votes { display: inline-flex; gap: 6px; align-items: center; }
+.vote {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid var(--line); background: #fff; color: var(--muted);
+  border-radius: 8px; padding: 4px 8px; font: inherit; font-size: 12px;
+  cursor: pointer; transition: border-color .12s, background .12s, color .12s;
+  font-variant-numeric: tabular-nums;
+}
+.vote:hover { border-color: var(--sage); color: var(--ink); }
+.vote.up.active { background: #e2ecdc; color: #38502f; border-color: #b9cbb0; }
+.vote.down.active { background: #f0e3e0; color: #8a3f36; border-color: #dcc0ba; }
+.votes.compact .vote { padding: 3px 6px; font-size: 11px; }
+.card-vote { margin-top: auto; padding-top: 10px; border-top: 1px solid #efebe2; }
+.d-vote { margin: 0 0 18px; }
 
 .score {
   display: inline-grid; place-items: center; min-width: 44px; height: 30px; padding: 0 8px;

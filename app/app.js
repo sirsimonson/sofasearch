@@ -7,6 +7,20 @@
 
   let DATA = [];
   let view = "table";
+  let VOTES = {};
+  let MINE = {};
+  const VOTER = (() => {
+    try {
+      let v = localStorage.getItem("couch-voter");
+      if (!v) {
+        v = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/-/g, "").slice(0, 32);
+        localStorage.setItem("couch-voter", v);
+      }
+      return v;
+    } catch (_) {
+      return "anon" + Math.random().toString(36).slice(2, 12);
+    }
+  })();
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const scoreClass = (s) => (s >= 6.5 ? "high" : s >= 4 ? "mid" : "low");
@@ -32,6 +46,7 @@
       renderStats();
       bind();
       render();
+      loadVotes();
     })
     .catch((err) => {
       $("#count").textContent = "Daten konnten nicht geladen werden";
@@ -45,6 +60,70 @@
       const o = document.createElement("option");
       o.value = s; o.textContent = s;
       sel.appendChild(o);
+    }
+  }
+
+  function voteMarkup(id, compact = false) {
+    const v = VOTES[id] || { up: 0, down: 0 };
+    const m = MINE[id] || 0;
+    return `<div class="votes${compact ? " compact" : ""}" data-votes-for="${esc(id)}">
+      <button type="button" class="vote up${m === 1 ? " active" : ""}" data-id="${esc(id)}" data-vote="1" title="Upvote" aria-label="Upvote">▲ <span data-up>${v.up}</span></button>
+      <button type="button" class="vote down${m === -1 ? " active" : ""}" data-id="${esc(id)}" data-vote="-1" title="Downvote" aria-label="Downvote">▼ <span data-down>${v.down}</span></button>
+    </div>`;
+  }
+
+  function syncVotes(id) {
+    document.querySelectorAll(`[data-votes-for="${id}"]`).forEach((box) => {
+      const v = VOTES[id] || { up: 0, down: 0 };
+      const m = MINE[id] || 0;
+      box.querySelector("[data-up]").textContent = v.up;
+      box.querySelector("[data-down]").textContent = v.down;
+      box.querySelector(".vote.up").classList.toggle("active", m === 1);
+      box.querySelector(".vote.down").classList.toggle("active", m === -1);
+    });
+  }
+
+  async function loadVotes() {
+    try {
+      const r = await fetch(`/api/votes?voter=${encodeURIComponent(VOTER)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      VOTES = d.totals || {};
+      MINE = d.mine || {};
+      if (view === "table") renderTable(filtered()); else renderCards(filtered());
+    } catch (err) {
+      console.warn("Votes konnten nicht geladen werden:", err);
+    }
+  }
+
+  async function handleVote(id, value) {
+    const prevMine = MINE[id] || 0;
+    const prev = VOTES[id] || { up: 0, down: 0 };
+    const next = prevMine === value ? 0 : value;
+    const optimistic = { up: prev.up, down: prev.down };
+    if (prevMine === 1) optimistic.up--;
+    if (prevMine === -1) optimistic.down--;
+    if (next === 1) optimistic.up++;
+    if (next === -1) optimistic.down++;
+    VOTES[id] = optimistic;
+    MINE[id] = next;
+    syncVotes(id);
+    try {
+      const r = await fetch("/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couchId: id, voterId: VOTER, value: next }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      VOTES[id] = { up: d.up, down: d.down };
+      MINE[id] = d.mine;
+      syncVotes(id);
+    } catch (err) {
+      VOTES[id] = prev;
+      MINE[id] = prevMine;
+      syncVotes(id);
+      console.warn("Vote fehlgeschlagen:", err);
     }
   }
 
@@ -75,6 +154,13 @@
     $("#closeDetail").addEventListener("click", () => $("#detail").close());
     $("#detail").addEventListener("click", (e) => { if (e.target === $("#detail")) $("#detail").close(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#detail").open) $("#detail").close(); });
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-vote]");
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      handleVote(btn.dataset.id, Number(btn.dataset.vote));
+    }, true);
   }
 
   function reset() {
@@ -164,6 +250,7 @@
         <td>${cm(c.sitzhoehe)}</td>
         <td class="tag">${esc(c.haendler)}</td>
         <td>${colorCell(c)}</td>
+        <td class="c-vote">${voteMarkup(c.id, true)}</td>
         <td>${c.empfehlung ? '<span class="badge yes">ja</span>' : '<span class="badge no">nein</span>'}</td>
       </tr>`;
     }).join("");
@@ -196,6 +283,7 @@
           <div><span>Récamiere</span><b>${cm(c.recamiere)}</b></div>
         </div>
         <p class="why">${esc(c.fazit || c.komfort)}</p>
+        <div class="card-vote">${voteMarkup(c.id)}</div>
       </article>`).join("");
 
     $("#cardView").querySelectorAll(".card").forEach((el) => {
@@ -230,6 +318,7 @@
         ${c.duplicate ? `<span class="badge dup">Duplikat von ${esc(c.duplicate)}</span>` : ""}
         ${c.nonproduct ? `<span class="badge warn">${esc(c.nonproduct)}</span>` : ""}
       </div>
+      <div class="d-vote">${voteMarkup(c.id)}</div>
       <div class="d-grid">
         <div class="d-block">
           <h4>Maße</h4>
